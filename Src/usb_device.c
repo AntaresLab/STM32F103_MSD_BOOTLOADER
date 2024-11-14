@@ -29,6 +29,8 @@
 
 /* USER CODE BEGIN Includes */
 
+#include <stdbool.h>
+
 /* USER CODE END Includes */
 
 /* USER CODE BEGIN PV */
@@ -55,6 +57,11 @@ USBD_HandleTypeDef hUsbDeviceFS;
  * -- Insert your external function declaration here --
  */
 /* USER CODE BEGIN 1 */
+
+bool MX_USB_DEVICE_Is_Initialized(void)
+{
+  return (hUsbDeviceFS.dev_state == USBD_STATE_CONFIGURED);
+}
 
 /* USER CODE END 1 */
 

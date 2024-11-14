@@ -34,6 +34,8 @@
 
 /* USER CODE BEGIN INCLUDE */
 
+#include <stdbool.h>
+
 /* USER CODE END INCLUDE */
 
 /** @addtogroup USBD_OTG_DRIVER
@@ -57,6 +59,8 @@
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
+
+bool MX_USB_DEVICE_Is_Initialized(void);
 
 /* USER CODE END PFP */
 

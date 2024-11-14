@@ -74,7 +74,7 @@ static void MX_GPIO_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-#if (BTLDR_ACT_NoAppExist > 0u)
+
 bool is_appcode_exist(void)
 {
   uint32_t *mem = (uint32_t*)APP_ADDR;
@@ -91,7 +91,7 @@ bool is_appcode_exist(void)
     return true;
   }
 }
-#endif
+
 
 #if (BTLDR_ACT_CksNotVld > 0u)
 bool app_cks_valid(void)
@@ -140,6 +140,18 @@ void SystemReset(void){
     NVIC_SystemReset();
 }
 
+void go_to_main_app(void)
+{
+  SCB->VTOR = APP_ADDR;
+  __set_MSP((*(__IO uint32_t*)APP_ADDR));
+  ((void (*) (void)) (*((__IO uint32_t*)(APP_ADDR+4u)))) ();
+  for(;;);
+}
+
+#define DEFAULT_MODE_MAGIC         (0x00000000)
+#define GO_TO_MAIN_APP_MODE_MAGIC  (0x236EF7C9)
+#define USB_INIT_TIMEOUT_MS        (3000)
+
 /* USER CODE END 0 */
 
 /**
@@ -148,6 +160,14 @@ void SystemReset(void){
   */
 int main(void)
 {
+  if ((btldr_act_req_key == GO_TO_MAIN_APP_MODE_MAGIC) && is_appcode_exist())
+  {
+    btldr_act_req_key = DEFAULT_MODE_MAGIC;
+    go_to_main_app();
+  }
+
+  btldr_act_req_key = DEFAULT_MODE_MAGIC;
+
   /* USER CODE BEGIN 1 */
   static uint32_t jump_addr;
 
@@ -174,61 +194,21 @@ int main(void)
   
   /* USER CODE BEGIN 2 */
 
- if(	/* Check for configured activation options */
-    #if (BTLDR_ACT_NoAppExist > 0u)
-      !is_appcode_exist()
-    #endif
-    #if (BTLDR_ACT_ButtonPress > 0u)
-      || is_button_down()
-    #endif
-    #if (BTLDR_ACT_CksNotVld > 0u)
-      || !app_cks_valid()
-    #endif
-    #if (BTLDR_ACT_BootkeyDet > 0u)
-      || bootkey_detected()
-    #endif
-	 )
+  MX_USB_DEVICE_Init();
+  uint32_t timestamp = HAL_GetTick();
+  while(((HAL_GetTick() - timestamp) <= USB_INIT_TIMEOUT_MS) && !MX_USB_DEVICE_Is_Initialized());
+  if (!MX_USB_DEVICE_Is_Initialized())
   {
-#if(CONFIG_SUPPORT_CRYPT_MODE > 0u)
-    crypt_init();
-#endif
-    MX_USB_DEVICE_Init();
-    while(1)
+    btldr_act_req_key = GO_TO_MAIN_APP_MODE_MAGIC;
+    NVIC_SystemReset();
+  }
+
+  while(1)
     {
-#if (CONFIG_SOFT_RESET_AFTER_IHEX_EOF > 0u)
       if(ihex_is_eof()) {
-        #if (BTLDR_ACT_BootkeyDet > 0u)
-         btldr_act_req_key = 0;
-        #endif
          SystemReset();
       }
-#endif
     }
-  }
-  else
-  {
-    // Jump to the app code
-	jump_addr = *((__IO uint32_t*)(APP_ADDR+4u));
-	HAL_DeInit();
-
-	// Disable all interrupts
-	NVIC->ICER[0] = 0xFFFFFFFF;
-	NVIC->ICER[1] = 0xFFFFFFFF;
-	NVIC->ICER[2] = 0xFFFFFFFF;
-
-	NVIC->ICPR[0] = 0xFFFFFFFF;
-	NVIC->ICPR[1] = 0xFFFFFFFF;
-	NVIC->ICPR[2] = 0xFFFFFFFF;
-
-	/* deactivate SysTick */
-	SysTick->CTRL = 0;
-
-	/* Change the main stack pointer. */
-	SCB->VTOR = APP_ADDR;
-	__set_MSP((*(__IO uint32_t*)APP_ADDR));
-
-	((void (*) (void)) (jump_addr)) ();
-  }
 
   /* USER CODE END 2 */
 
