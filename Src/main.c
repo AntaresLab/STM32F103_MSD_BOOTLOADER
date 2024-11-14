@@ -199,8 +199,9 @@ int main(void)
   while(((HAL_GetTick() - timestamp) <= USB_INIT_TIMEOUT_MS) && !MX_USB_DEVICE_Is_Initialized());
   if (!MX_USB_DEVICE_Is_Initialized())
   {
-    btldr_act_req_key = GO_TO_MAIN_APP_MODE_MAGIC;
-    NVIC_SystemReset();
+    //btldr_act_req_key = GO_TO_MAIN_APP_MODE_MAGIC;
+    //NVIC_SystemReset();
+    LL_GPIO_ResetOutputPin(GPIOC, LL_GPIO_PIN_13);
   }
 
   while(1)
@@ -286,6 +287,14 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
   LL_GPIO_Init(BTLDR_EN_GPIO_Port, &GPIO_InitStruct);
 
+  LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOC);
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_13;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
+  GPIO_InitStruct.Speed = LL_GPIO_MODE_OUTPUT_2MHz;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
+  LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  LL_GPIO_SetOutputPin(GPIOC, LL_GPIO_PIN_13);
 }
 
 /* USER CODE BEGIN 4 */
